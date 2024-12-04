@@ -9,7 +9,7 @@ from mlagents.trainers.torch_entities.encoders import (
     NatureVisualEncoder,
     SmallVisualEncoder,
     FullyConnectedVisualEncoder,
-    VectorInput,
+    VectorInput, MansNet,
 )
 from mlagents.trainers.settings import EncoderType, ScheduleType
 from mlagents.trainers.torch_entities.attention import (
@@ -29,6 +29,7 @@ class ModelUtils:
         EncoderType.SIMPLE: 20,
         EncoderType.NATURE_CNN: 36,
         EncoderType.RESNET: 15,
+        EncoderType.MANSNET: 15,
     }
 
     VALID_VISUAL_PROP = frozenset(
@@ -129,6 +130,7 @@ class ModelUtils:
             EncoderType.RESNET: ResNetVisualEncoder,
             EncoderType.MATCH3: SmallVisualEncoder,
             EncoderType.FULLY_CONNECTED: FullyConnectedVisualEncoder,
+            EncoderType.MANSNET: MansNet,
         }
         return ENCODER_FUNCTION_BY_TYPE.get(encoder_type)
 
