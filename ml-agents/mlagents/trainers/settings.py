@@ -100,6 +100,7 @@ class EncoderType(Enum):
     SIMPLE = "simple"
     NATURE_CNN = "nature_cnn"
     RESNET = "resnet"
+    MANSNET = "mans_net"
 
 
 class ScheduleType(Enum):
