@@ -38,7 +38,8 @@ namespace Unity.MLAgents.Sensors
         }
 
         [HideInInspector, SerializeField, FormerlySerializedAs("raysPerDirection")]
-        [Range(0, 50)]
+        // Here we modifie the number of rays to cast
+        [Range(0, 1000000)] // the range is from 0 to 50 initially
         [Tooltip("Number of rays to the left and right of center.")]
         int m_RaysPerDirection = 3;
 
@@ -54,7 +55,8 @@ namespace Unity.MLAgents.Sensors
         }
 
         [HideInInspector, SerializeField, FormerlySerializedAs("maxRayDegrees")]
-        [Range(0, 180)]
+        // Here we modifie the value of the field of view
+        [Range(0, 1000000)] //the range of the field of view is from 0 to 180 initially
         [Tooltip("Cone size for rays. Using 90 degrees will cast rays to the left and right. " +
             "Greater than 90 degrees will go backwards.")]
         float m_MaxRayDegrees = 70;
@@ -70,7 +72,8 @@ namespace Unity.MLAgents.Sensors
         }
 
         [HideInInspector, SerializeField, FormerlySerializedAs("sphereCastRadius")]
-        [Range(0f, 10f)]
+        // Here we modifie the radius of the sphere to cast
+        [Range(0f, 10f)] // the range of the sphere cast radius is from 0 to 10 initially
         [Tooltip("Radius of sphere to cast. Set to zero for raycasts.")]
         float m_SphereCastRadius = 0.5f;
 
@@ -84,7 +87,8 @@ namespace Unity.MLAgents.Sensors
         }
 
         [HideInInspector, SerializeField, FormerlySerializedAs("rayLength")]
-        [Range(1, 1000)]
+        // Here we modifie the length of the rays to cast
+        [Range(1, 1000000)] // the range of the ray length is from 1 to 50 initially
         [Tooltip("Length of the rays to cast.")]
         float m_RayLength = 20f;
 
@@ -113,7 +117,7 @@ namespace Unity.MLAgents.Sensors
         }
 
         [HideInInspector, SerializeField, FormerlySerializedAs("observationStacks")]
-        [Range(1, 50)]
+        [Range(1, 1000000)]
         [Tooltip("Number of raycast results that will be stacked before being fed to the neural network.")]
         int m_ObservationStacks = 1;
 
