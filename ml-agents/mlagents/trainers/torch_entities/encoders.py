@@ -295,12 +295,12 @@ class MansNet(nn.Module):
         super().__init__()
 
         # Calculate intermediate shapes for pooling and convolutions
-        conv1_hw = conv_output_shape((height, width), kernel_size=3, stride=2, padding=1)
+        conv1_hw = conv_output_shape((height, width), kernel_size=2, stride=1, padding=1)
         pool_hw = pool_out_shape(conv1_hw, kernel_size=2)
         conv2_hw = conv_output_shape(pool_hw, kernel_size=3, stride=1, padding=0)
 
         # Define convolutional and pooling layers
-        self.conv1 = nn.Conv2d(initial_channels, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv2d(initial_channels, out_channels=32, kernel_size=2, stride=1, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
 
