@@ -288,48 +288,50 @@ class ResNetVisualEncoder(nn.Module):
 
 class MansNet(nn.Module):
     def __init__(self, height: int, width: int, initial_channels: int, output_size: int):
-        """
-        MansNet: A simple convolutional neural network for processing visual inputs.
-        Includes two convolutional layers and a max-pooling layer in between, followed by a fully connected layer.
-        """
         super().__init__()
 
-        # Calculate intermediate shapes for pooling and convolutions
-        conv1_hw = conv_output_shape((height, width), kernel_size=3, stride=2, padding=1)
-        pool_hw = pool_out_shape(conv1_hw, kernel_size=2)
-        conv2_hw = conv_output_shape(pool_hw, kernel_size=3, stride=1, padding=0)
-
-        # Define convolutional and pooling layers
-        self.conv1 = nn.Conv2d(initial_channels, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
-
-        # Calculate the final flattened size after convolution and pooling
-        self.final_flat = conv2_hw[0] * conv2_hw[1] * 64
-
-        # Define the dense (fully connected) layer
-        self.fc = nn.Sequential(
-            linear_layer(
-                self.final_flat,
-                output_size,
-                kernel_init=Initialization.KaimingHeNormal,
-                kernel_gain=1.41,  # Use ReLU gain
-            ),
-            nn.LeakyReLU(),
+        # Première convolution + MaxPooling
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(initial_channels, 16, kernel_size=5, stride=2, padding=2),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)  # MaxPooling initial
         )
 
-    def forward(self, visual_obs: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass through the MansNet model.
-        :param visual_obs: Input tensor of shape (batch_size, channels, height, width).
-        :return: Output tensor of shape (batch_size, output_size).
-        """
-        x = torch.relu(self.conv1(visual_obs))  # First convolution + activation
-        x = self.pool(x)  # Max pooling
-        x = torch.relu(self.conv2(x))  # Second convolution + activation
-        x = x.view(-1, self.final_flat)  # Flatten
-        x = self.fc(x)  # Fully connected layer
+        # Deuxième convolution + AveragePooling
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.AvgPool2d(kernel_size=2, stride=2)  # AveragePooling ici
+        )
+
+        # Troisième convolution
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True)
+        )
+
+        # Global Average Pooling
+        self.gap = nn.AdaptiveAvgPool2d(1)
+
+        # Fully Connected
+        self.fc = nn.Sequential(
+            nn.Linear(64, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, output_size)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.conv1(x)  # Première réduction (MaxPooling)
+        x = self.conv2(x)  # Deuxième réduction (AveragePooling)
+        x = self.conv3(x)  # Extraction de features
+        x = self.gap(x)    # GAP pour compresser en 1x1
+        x = torch.flatten(x, 1)
+        x = self.fc(x)     # Fully Connected pour la sortie
         return x
+
 
 
 
