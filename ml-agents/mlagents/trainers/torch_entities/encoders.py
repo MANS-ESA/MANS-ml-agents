@@ -292,44 +292,44 @@ class MansNet(nn.Module):
 
         # Première convolution + MaxPooling
         self.conv1 = nn.Sequential(
-            nn.Conv2d(initial_channels, 16, kernel_size=5, stride=2, padding=2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2)  # MaxPooling initial
+            nn.Conv2d(initial_channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(32),  # Normalisation pour rendre robuste aux variations d'éclairage
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),  # Activation plus robuste
+            nn.MaxPool2d(kernel_size=2, stride=2)  # Réduction spatiale modérée
         )
 
-        # Deuxième convolution + AveragePooling
+        # Deuxième convolution + MaxPooling
         self.conv2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.AvgPool2d(kernel_size=2, stride=2)  # AveragePooling ici
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),  # Normalisation pour stabiliser les activations
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),  # Activation robuste
+            nn.MaxPool2d(kernel_size=2, stride=2)  # Réduction spatiale
         )
 
-        # Troisième convolution
+        # Troisième convolution (sans pooling, pour enrichir les features)
         self.conv3 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True)
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),  # Normalisation
+            nn.LeakyReLU(negative_slope=0.01, inplace=True)  # Activation robuste
         )
 
-        # Global Average Pooling
-        self.gap = nn.AdaptiveAvgPool2d(1)
+        # Global Average Pooling (GAP) pour sortir en 4x4
+        self.gap = nn.AdaptiveAvgPool2d(4)
 
         # Fully Connected
         self.fc = nn.Sequential(
-            nn.Linear(64, 128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, output_size)
+            nn.Linear(128 * 4 * 4, 256),  # Beaucoup de features pour éviter la perte d'information
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            nn.Linear(256, output_size)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.conv1(x)  # Première réduction (MaxPooling)
-        x = self.conv2(x)  # Deuxième réduction (AveragePooling)
-        x = self.conv3(x)  # Extraction de features
-        x = self.gap(x)    # GAP pour compresser en 1x1
-        x = torch.flatten(x, 1)
-        x = self.fc(x)     # Fully Connected pour la sortie
+        x = self.conv1(x)  # Première couche
+        x = self.conv2(x)  # Deuxième couche
+        x = self.conv3(x)  # Troisième couche
+        x = self.gap(x)    # Compression GAP en 4x4
+        x = torch.flatten(x, 1)  # Flatten pour le Fully Connected
+        x = self.fc(x)     # Fully Connected
         return x
 
 
