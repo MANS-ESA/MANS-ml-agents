@@ -171,6 +171,10 @@ class ObservationEncoder(nn.Module):
 
 
 class NetworkBody(nn.Module):
+    """
+    Main network body that processes observations and produces an encoding.
+    """
+
     def __init__(
         self,
         observation_specs: List[ObservationSpec],
@@ -178,53 +182,77 @@ class NetworkBody(nn.Module):
         encoded_act_size: int = 0,
     ):
         super().__init__()
+
         self.normalize = network_settings.normalize
         self.use_lstm = network_settings.memory is not None
-        self.h_size = network_settings.hidden_units
+        self.layer_sizes = network_settings.layer_sizes 
         self.m_size = (
-            network_settings.memory.memory_size
-            if network_settings.memory is not None
-            else 0
+            network_settings.memory.memory_size if network_settings.memory else 0
         )
+
+
         self.observation_encoder = ObservationEncoder(
             observation_specs,
-            self.h_size,
+            self.layer_sizes[0], #first layer size
             network_settings.vis_encode_type,
             self.normalize,
         )
         self.processors = self.observation_encoder.processors
-        total_enc_size = self.observation_encoder.total_enc_size
-        total_enc_size += encoded_act_size
+        total_enc_size = self.observation_encoder.total_enc_size + encoded_act_size
 
         if (
             self.observation_encoder.total_goal_enc_size > 0
             and network_settings.goal_conditioning_type == ConditioningType.HYPER
         ):
-            self._body_endoder = ConditionalEncoder(
+            self._body_encoder = ConditionalEncoder(
                 total_enc_size,
                 self.observation_encoder.total_goal_enc_size,
-                self.h_size,
-                network_settings.num_layers,
+                self.layer_sizes[0],
+                len(self.layer_sizes), 
                 1,
             )
         else:
-            self._body_endoder = LinearEncoder(
-                total_enc_size, network_settings.num_layers, self.h_size
-            )
+            self._body_encoder = self._build_mlp(total_enc_size, self.layer_sizes)
+
 
         if self.use_lstm:
-            self.lstm = LSTM(self.h_size, self.m_size)
+            self.lstm = LSTM(self.layer_sizes[-1], self.m_size)
         else:
-            self.lstm = None  # type: ignore
+            self.lstm = None
+
+    def _build_mlp(self, input_size: int, layer_sizes: List[int]) -> nn.Sequential:
+        """
+        Construit dynamiquement un MLP basé sur `layer_sizes` et assure que la sortie correspond à `expected_output_size`.
+        """
+        layers = []
+        prev_size = input_size
+
+
+        for size in layer_sizes:
+            layers.append(nn.Linear(prev_size, size))
+            layers.append(nn.ReLU())
+            prev_size = size
+
+        return nn.Sequential(*layers)
+
 
     def update_normalization(self, buffer: AgentBuffer) -> None:
+        """
+        Update the normalization of the network based on the provided List of vector obs.
+        """
         self.observation_encoder.update_normalization(buffer)
 
     def copy_normalization(self, other_network: "NetworkBody") -> None:
+        """
+        Copy the normalization of the network based on the provided List of vector obs.
+        """
         self.observation_encoder.copy_normalization(other_network.observation_encoder)
 
     @property
     def memory_size(self) -> int:
+        """
+        Returns the size of the memory used by the LSTM.
+        """
         return self.lstm.memory_size if self.use_lstm else 0
 
     def forward(
@@ -234,20 +262,30 @@ class NetworkBody(nn.Module):
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Encode the observations and produce an encoding.
+        """
+
+
         encoded_self = self.observation_encoder(inputs)
+
+
         if actions is not None:
             encoded_self = torch.cat([encoded_self, actions], dim=1)
-        if isinstance(self._body_endoder, ConditionalEncoder):
+
+
+        if isinstance(self._body_encoder, ConditionalEncoder):
             goal = self.observation_encoder.get_goal_encoding(inputs)
-            encoding = self._body_endoder(encoded_self, goal)
+            encoding = self._body_encoder(encoded_self, goal)
         else:
-            encoding = self._body_endoder(encoded_self)
+            encoding = self._body_encoder(encoded_self)
 
         if self.use_lstm:
-            # Resize to (batch, sequence length, encoding size)
-            encoding = encoding.reshape([-1, sequence_length, self.h_size])
+            encoding = encoding.reshape([-1, sequence_length, self.layer_sizes[-1]])
             encoding, memories = self.lstm(encoding, memories)
             encoding = encoding.reshape([-1, self.m_size // 2])
+
+
         return encoding, memories
 
 
@@ -267,7 +305,7 @@ class MultiAgentNetworkBody(torch.nn.Module):
         super().__init__()
         self.normalize = network_settings.normalize
         self.use_lstm = network_settings.memory is not None
-        self.h_size = network_settings.hidden_units
+        self.layer_sizes = network_settings.layer_sizes  # Liste complète des tailles de couches
         self.m_size = (
             network_settings.memory.memory_size
             if network_settings.memory is not None
@@ -276,7 +314,7 @@ class MultiAgentNetworkBody(torch.nn.Module):
         self.action_spec = action_spec
         self.observation_encoder = ObservationEncoder(
             observation_specs,
-            self.h_size,
+            self.layer_sizes[0],
             network_settings.vis_encode_type,
             self.normalize,
         )
@@ -468,7 +506,7 @@ class ValueNetwork(nn.Module, Critic):
         if network_settings.memory is not None:
             encoding_size = network_settings.memory.memory_size // 2
         else:
-            encoding_size = network_settings.hidden_units
+            encoding_size = network_settings.layer_sizes[-1]
         self.value_heads = ValueHeads(stream_names, encoding_size, outputs_per_stream)
 
     def update_normalization(self, buffer: AgentBuffer) -> None:
@@ -606,10 +644,11 @@ class SimpleActor(nn.Module, Actor):
         if network_settings.memory is not None:
             self.encoding_size = network_settings.memory.memory_size // 2
         else:
-            self.encoding_size = network_settings.hidden_units
+            self.encoding_size = network_settings.layer_sizes[-1]
         self.memory_size_vector = torch.nn.Parameter(
             torch.Tensor([int(self.network_body.memory_size)]), requires_grad=False
         )
+
 
         self.action_model = ActionModel(
             self.encoding_size,
@@ -686,7 +725,6 @@ class SimpleActor(nn.Module, Actor):
         (
             cont_action_out,
             disc_action_out,
-            action_out_deprecated,
             deterministic_cont_action_out,
             deterministic_disc_action_out,
         ) = self.action_model.get_action_out(encoding, masks)
