@@ -85,7 +85,8 @@ namespace Unity.MLAgents.Sensors
         /// <returns>The expected number of floats in the output.</returns>
         public int OutputSize()
         {
-            return ((DetectableTags?.Count ?? 0) + 2) * (Angles?.Count ?? 0);
+            //now only return the distance
+            return Angles.Count;
         }
 
         /// <summary>
@@ -320,22 +321,24 @@ namespace Unity.MLAgents.Sensors
         /// <returns>The number of written observations.</returns>
         public int Write(ObservationWriter writer)
         {
+
+            //return only the distance so we can use  lidar IRL
+
+            var distances = new List<float>();
+
             using (TimerStack.Instance.Scoped("RayPerceptionSensor.Perceive"))
             {
-                Array.Clear(m_Observations, 0, m_Observations.Length);
                 var numRays = m_RayPerceptionInput.Angles.Count;
-                var numDetectableTags = m_RayPerceptionInput.DetectableTags.Count;
 
                 // For each ray, write the information to the observation buffer
                 for (var rayIndex = 0; rayIndex < numRays; rayIndex++)
                 {
-                    m_RayPerceptionOutput.RayOutputs?[rayIndex].ToFloatArray(numDetectableTags, rayIndex, m_Observations);
+                    distances.Add(m_RayPerceptionOutput.RayOutputs[rayIndex].HitFraction);
                 }
 
-                // Finally, add the observations to the ObservationWriter
-                writer.AddList(m_Observations);
+                writer.AddList(distances);
             }
-            return m_Observations.Length;
+            return distances.Count;
         }
 
         /// <inheritdoc/>
@@ -359,8 +362,14 @@ namespace Unity.MLAgents.Sensors
                 for (var rayIndex = 0; rayIndex < numRays; rayIndex++)
                 {
                     m_RayPerceptionOutput.RayOutputs[rayIndex] = PerceiveSingleRay(m_RayPerceptionInput, rayIndex);
+
+                    Debug.Log("Angle: " + m_RayPerceptionInput.Angles[rayIndex] + "Index: " + rayIndex);
                 }
             }
+
+            Debug.Log("nb Rays : " + numRays);
+
+
         }
 
         /// <inheritdoc/>
@@ -506,8 +515,6 @@ namespace Unity.MLAgents.Sensors
                     scaledRayLength = raycastCommands[i].distance;
                 }
 
-                // hitFraction = castHit ? (scaledRayLength > 0 ? results[i].distance / scaledRayLength : 0.0f) : 1.0f;
-                // Debug.Log(results[i].distance);
                 hitFraction = castHit ? (scaledRayLength > 0 ? results[i].distance / scaledRayLength : 0.0f) : 1.0f;
                 hitObject = castHit ? results[i].collider.gameObject : null;
 
