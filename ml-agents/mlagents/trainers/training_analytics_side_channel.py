@@ -160,7 +160,7 @@ class TrainingAnalyticsSideChannel(DefaultTrainingAnalyticsSideChannel):
             recurrent_enabled=config.network_settings.memory is not None,
             visual_encoder=config.network_settings.vis_encode_type.value,
             num_network_layers=config.network_settings.num_layers,
-            num_network_hidden_units=config.network_settings.hidden_units,
+            num_network_hidden_units=config.network_settings.layer_sizes[0],
             trainer_threaded=config.threaded,
             self_play_enabled=config.self_play is not None,
             curriculum_enabled=self._behavior_uses_curriculum(behavior_name),

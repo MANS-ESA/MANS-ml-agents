@@ -134,12 +134,16 @@ class NetworkSettings:
                 )
 
     normalize: bool = False
-    hidden_units: int = 128
-    num_layers: int = 2
+    layer_sizes: List[int] = attr.ib(factory=lambda: [128, 128])
     vis_encode_type: EncoderType = EncoderType.SIMPLE
     memory: Optional[MemorySettings] = None
     goal_conditioning_type: ConditioningType = ConditioningType.HYPER
     deterministic: bool = parser.get_default("deterministic")
+
+    @property
+    def num_layers(self) -> int:
+        """Retourne automatiquement le nombre de couches cachées."""
+        return len(self.layer_sizes)
 
 
 @attr.s(auto_attribs=True)
@@ -615,7 +619,7 @@ class SelfPlaySettings:
 @attr.s(auto_attribs=True)
 class TrainerSettings(ExportableSettings):
     default_override: ClassVar[Optional["TrainerSettings"]] = None
-    trainer_type: str = "ppo"
+    trainer_type: str = "ppo",
     hyperparameters: HyperparamSettings = attr.ib()
     checkpoint_interval: int = attr.ib()
 
@@ -963,10 +967,12 @@ class RunOptions(ExportableSettings):
         return final_runoptions
 
     @staticmethod
-    def from_dict(
-        options_dict: Dict[str, Any],
-    ) -> "RunOptions":
-        # If a default settings was specified, set the TrainerSettings class override
+    def from_dict(options_dict: Dict[str, Any]) -> "RunOptions":
+        """
+        Convertit un dictionnaire Python (chargé depuis YAML) en objet RunOptions.
+        Ajoute le support de layer_sizes.
+        """
+        # Si `default_settings` est spécifié, applique-le en priorité
         if (
             "default_settings" in options_dict.keys()
             and options_dict["default_settings"] is not None
@@ -974,4 +980,13 @@ class RunOptions(ExportableSettings):
             TrainerSettings.default_override = cattr.structure(
                 options_dict["default_settings"], TrainerSettings
             )
-        return cattr.structure(options_dict, RunOptions)
+
+        # Convertit le dictionnaire YAML en objets Python
+        structured = cattr.structure(options_dict, RunOptions)
+
+        # Vérification et conversion de `layer_sizes`
+        for behavior_name, trainer_settings in structured.behaviors.items():
+            if not trainer_settings.network_settings.layer_sizes:
+                raise ValueError(f"The behaviour '{behavior_name}' must have at least one hidden layer.")
+
+        return structured

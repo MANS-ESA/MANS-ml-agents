@@ -506,8 +506,6 @@ namespace Unity.MLAgents.Sensors
                     scaledRayLength = raycastCommands[i].distance;
                 }
 
-                // hitFraction = castHit ? (scaledRayLength > 0 ? results[i].distance / scaledRayLength : 0.0f) : 1.0f;
-                // Debug.Log(results[i].distance);
                 hitFraction = castHit ? (scaledRayLength > 0 ? results[i].distance / scaledRayLength : 0.0f) : 1.0f;
                 hitObject = castHit ? results[i].collider.gameObject : null;
 

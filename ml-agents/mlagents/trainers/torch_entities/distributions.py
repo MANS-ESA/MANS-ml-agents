@@ -91,6 +91,11 @@ class GaussianDistInstance(DistInstance):
 
     def exported_model_output(self):
         return self.sample()
+    
+    @property
+    def stddev(self):
+        """Return the standard deviation for external use."""
+        return self.std
 
 
 class TanhGaussianDistInstance(GaussianDistInstance):
