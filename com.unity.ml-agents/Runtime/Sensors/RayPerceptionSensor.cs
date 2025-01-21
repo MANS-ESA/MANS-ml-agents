@@ -362,12 +362,8 @@ namespace Unity.MLAgents.Sensors
                 for (var rayIndex = 0; rayIndex < numRays; rayIndex++)
                 {
                     m_RayPerceptionOutput.RayOutputs[rayIndex] = PerceiveSingleRay(m_RayPerceptionInput, rayIndex);
-
-                    Debug.Log("Angle: " + m_RayPerceptionInput.Angles[rayIndex] + "Index: " + rayIndex);
                 }
             }
-
-            Debug.Log("nb Rays : " + numRays);
 
 
         }
