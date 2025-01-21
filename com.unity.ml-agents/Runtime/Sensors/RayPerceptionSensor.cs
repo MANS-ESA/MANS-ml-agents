@@ -320,6 +320,7 @@ namespace Unity.MLAgents.Sensors
         /// <returns>The number of written observations.</returns>
         public int Write(ObservationWriter writer)
         {
+            Debug.Log("RayPerceptionSensor.Write");
             using (TimerStack.Instance.Scoped("RayPerceptionSensor.Perceive"))
             {
                 Array.Clear(m_Observations, 0, m_Observations.Length);

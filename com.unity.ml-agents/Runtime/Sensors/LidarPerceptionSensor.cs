@@ -100,6 +100,23 @@ namespace Unity.MLAgents.Sensors
             m_Observations = new float[numObservations];
         }
 
+        internal void SetLidarPerceptionInput(LidarPerceptionInput rayInput)
+        {
+            // Note that change the number of rays or tags doesn't directly call this,
+            // but changing them and then changing another field will.
+            if (m_LidarPerceptionInput.OutputSize() != rayInput.OutputSize())
+            {
+                Debug.Log(
+                    "Changing the number of tags or rays at runtime is not " +
+                    "supported and may cause errors in training or inference."
+                );
+                // Changing the shape will probably break things downstream, but we can at least
+                // keep this consistent.
+                SetNumObservations(rayInput.OutputSize());
+            }
+            m_LidarPerceptionInput = rayInput;
+        }
+
         public int Write(ObservationWriter writer)
         {
             Array.Clear(m_Observations, 0, m_Observations.Length);
@@ -118,6 +135,8 @@ namespace Unity.MLAgents.Sensors
 
         public void Update()
         {
+
+            Debug.Log("LidarPerceptionSensor.Update");
             var numRays = m_LidarPerceptionInput.Angles.Count;
 
             if (m_LidarPerceptionOutput.RayOutputs == null || m_LidarPerceptionOutput.RayOutputs.Length != numRays)
@@ -184,6 +203,6 @@ namespace Unity.MLAgents.Sensors
         public string GetName() => m_Name;
         public byte[] GetCompressedObservation() => null;
         public CompressionSpec GetCompressionSpec() => CompressionSpec.Default();
-        public BuiltInSensorType GetBuiltInSensorType() => BuiltInSensorType.RayPerceptionSensor;
+        public BuiltInSensorType GetBuiltInSensorType() => BuiltInSensorType.LidarPerceptionSensor;
     }
 }

@@ -51,7 +51,10 @@ namespace Unity.MLAgents.Sensors
         /// <summary>
         /// Sensors that break down the world into a grid of colliders to observe an area at a pre-defined granularity.
         /// </summary>
-        GridSensor = 10
+        GridSensor = 10,
+
+
+        LidarPerceptionSensor = 11
     }
 
     /// <summary>

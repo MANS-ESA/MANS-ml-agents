@@ -38,9 +38,9 @@ namespace Unity.MLAgents.Sensors
         }
 
         /// <inheritdoc/>
-        public override RayPerceptionCastType GetCastType()
+        public override LidarPerceptionCastType GetCastType()
         {
-            return RayPerceptionCastType.Cast3D;
+            return LidarPerceptionCastType.Cast3D;
         }
 
         /// <inheritdoc/>
