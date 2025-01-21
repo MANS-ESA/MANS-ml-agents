@@ -165,52 +165,39 @@ class ActionModel(nn.Module):
 
     def get_action_out(self, inputs: torch.Tensor, masks: torch.Tensor) -> torch.Tensor:
         """
-        Gets the tensors corresponding to the output of the policy network to be used for
-        inference. Called by the Actor's forward call.
-        :params inputs: The encoding from the network body
-        :params masks: Action masks for discrete actions
-        :return: A tuple of torch tensors corresponding to the inference output
+        Computes the policy network output for inference.
+
+        Outputs:
+            - **continuous_out**: Stochastic actions with added noise.
+            - **discrete_out**: Discrete actions.
+            - **deterministic_continuous_out**: Continuous actions without noise.
+            - **deterministic_discrete_out**: Deterministic discrete actions.
         """
         dists = self._get_dists(inputs, masks)
-        continuous_out, discrete_out, action_out_deprecated = None, None, None
-        deterministic_continuous_out, deterministic_discrete_out = (
-            None,
-            None,
-        )  # deterministic actions
-        if self.action_spec.continuous_size > 0 and dists.continuous is not None:
-            continuous_out = dists.continuous.exported_model_output()
-            action_out_deprecated = continuous_out
-            deterministic_continuous_out = dists.continuous.deterministic_sample()
-            if self.clip_action:
-                continuous_out = torch.clamp(continuous_out, -3, 3) / 3
-                action_out_deprecated = continuous_out
-                deterministic_continuous_out = (
-                    torch.clamp(deterministic_continuous_out, -3, 3) / 3
-                )
-        if self.action_spec.discrete_size > 0 and dists.discrete is not None:
-            discrete_out_list = [
-                discrete_dist.exported_model_output()
-                for discrete_dist in dists.discrete
-            ]
-            discrete_out = torch.cat(discrete_out_list, dim=1)
-            action_out_deprecated = torch.cat(discrete_out_list, dim=1)
-            deterministic_discrete_out_list = [
-                discrete_dist.deterministic_sample() for discrete_dist in dists.discrete
-            ]
-            deterministic_discrete_out = torch.cat(
-                deterministic_discrete_out_list, dim=1
-            )
+        continuous_out, discrete_out = None, None
+        deterministic_continuous_out, deterministic_discrete_out = None, None
 
-        # deprecated action field does not support hybrid action
-        if self.action_spec.continuous_size > 0 and self.action_spec.discrete_size > 0:
-            action_out_deprecated = None
+        # Continuous Action Handling
+        if dists.continuous is not None:
+            # Deterministic action
+            deterministic_continuous_out = dists.continuous.deterministic_sample()
+
+            # Generate noise directly with RandomNormalLike
+            noise = torch.randn_like(deterministic_continuous_out) * dists.continuous.stddev
+            continuous_out = deterministic_continuous_out + noise  # No Mul, no Clip
+
+        # Discrete Action Handling
+        if dists.discrete is not None:
+            discrete_out = torch.cat([dist.exported_model_output() for dist in dists.discrete], dim=1)
+            deterministic_discrete_out = torch.cat([dist.deterministic_sample() for dist in dists.discrete], dim=1)
+
         return (
-            continuous_out,
-            discrete_out,
-            action_out_deprecated,
-            deterministic_continuous_out,
-            deterministic_discrete_out,
+            continuous_out,  # Stochastic action (RandomNormalLike applied)
+            discrete_out,  # Stochastic discrete action
+            deterministic_continuous_out,  # Deterministic action
+            deterministic_discrete_out,  # Deterministic discrete action
         )
+
 
     def forward(
         self, inputs: torch.Tensor, masks: torch.Tensor
