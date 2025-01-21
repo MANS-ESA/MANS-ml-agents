@@ -7,7 +7,7 @@ namespace Unity.MLAgents.Sensors
     /// A component for 3D Ray Perception.
     /// </summary>
     [AddComponentMenu("MANS - ML Agent/Lidar Perception Sensor 3D", (int)MenuGroup.Sensors)]
-    public class RayPerceptionSensorComponent3D : RayPerceptionSensorComponentBase
+    public class LidarPerceptionSensorComponent3D : LidarPerceptionSensorComponentBase
     {
         [HideInInspector, SerializeField, FormerlySerializedAs("startVerticalOffset")]
         [Range(-10f, 10f)]
