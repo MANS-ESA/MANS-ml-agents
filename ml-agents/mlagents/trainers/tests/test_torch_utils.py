@@ -36,6 +36,5 @@ def test_set_torch_device(
     except Exception:
         raise
     finally:
-        # restore the defaults
         torch_settings = TorchSettings(device=None)
         set_torch_config(torch_settings)

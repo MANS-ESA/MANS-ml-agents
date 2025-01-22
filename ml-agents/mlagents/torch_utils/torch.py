@@ -45,17 +45,39 @@ def set_torch_config(torch_settings: TorchSettings) -> None:
     global _device
 
     if torch_settings.device is None:
-        device_str = "cuda" if torch.cuda.is_available() else "cpu"
+        # * Original version (commented out):
+        # device_str = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # * New version with MPS support:
+        if torch.backends.mps.is_available():
+            device_str = "mps"
+        elif torch.cuda.is_available():
+            device_str = "cuda"
+        else:
+            device_str = "cpu"
     else:
         device_str = torch_settings.device
 
     _device = torch.device(device_str)
 
+    # * Original version (commented out):
+    # if _device.type == "cuda":
+    #     torch.set_default_device(_device.type)
+    #     torch.set_default_dtype(torch.cuda.FloatTensor)
+    # else:
+    #     torch.set_default_dtype(torch.float32)
+
+    # * New version with MPS support:
+    print(f"DEVICE TYPE: {_device.type}")
     if _device.type == "cuda":
+        torch.set_default_device(_device.type)
+        torch.set_default_dtype(torch.cuda.FloatTensor)
+    elif _device.type == "mps":
         torch.set_default_device(_device.type)
         torch.set_default_dtype(torch.float32)
     else:
         torch.set_default_dtype(torch.float32)
+
     logger.debug(f"default Torch device: {_device}")
 
 
